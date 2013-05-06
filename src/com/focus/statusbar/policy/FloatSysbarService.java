@@ -46,7 +46,6 @@ public class FloatSysbarService extends Service {
 	private int mDelaytime = 1000;
 	private int mAutoHideDelaytime = 1000 * 5;
 	private boolean mIsPopup = true;
-	private boolean mReset = true;
 
 	/* The WindowManager capable of injecting keyStrokes. */
 	final IWindowManager windowManager = IWindowManager.Stub
@@ -83,7 +82,7 @@ public class FloatSysbarService extends Service {
 		editor.commit();
 		mWm = (WindowManager) getApplicationContext()
 				.getSystemService("window");
-		mWmParams.type = 2002;
+		mWmParams.type = 2003;
 		mWmParams.flags |= 8;
 		mWmParams.gravity = Gravity.LEFT | Gravity.TOP;
 		mWmParams.x = 0;
@@ -109,7 +108,7 @@ public class FloatSysbarService extends Service {
 		public void run() {
 			// TODO Auto-generated method stub
 			mHandler.postDelayed(this, mAutoHideDelaytime);
-			HideLayout();
+			hideLayout();
 		}
 	};
 
@@ -144,23 +143,25 @@ public class FloatSysbarService extends Service {
 
 	public void popupMenu() {
 		if (mIsPopup) {
-			mIsPopup = false;
-			mPopupView.setVisibility(View.VISIBLE);
-			mFuctionMenuLayout.setVisibility(View.GONE);
-			updateViewPosition();
+			hideLayout();
 		} else {
 			mIsPopup = true;
 			mPopupView.setVisibility(View.GONE);
 			mFuctionMenuLayout.setVisibility(View.VISIBLE);
-			mReset = true;
+			resetAutoHide();
 		}
 	}
 
-	private void HideLayout() {
+	private void hideLayout() {
 		mIsPopup = false;
 		mPopupView.setVisibility(View.VISIBLE);
 		mFuctionMenuLayout.setVisibility(View.GONE);
 		updateViewPosition();
+	}
+
+	private void resetAutoHide() {
+		mHandler.removeCallbacks(autoHideTask);
+		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
 	}
 
 	OnTouchListener mMovingTouchListener = new OnTouchListener() {
@@ -169,8 +170,7 @@ public class FloatSysbarService extends Service {
 		public boolean onTouch(View arg0, MotionEvent event) {
 			// TODO Auto-generated method stub
 
-			mHandler.removeCallbacks(autoHideTask);
-			mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
+			resetAutoHide();
 
 			int x = (int) event.getRawX();
 			int y = (int) event.getRawY();

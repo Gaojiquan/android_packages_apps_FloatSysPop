@@ -11,7 +11,7 @@
 				android:layout_height="wrap_content"
 				android:layout_gravity="center"
 				android:visibility="gone"
-				android:src="@drawable/float_popup_menu" />
+				android:src="@drawable/btn_menu_selector" />
 
 			<FrameLayout
 				android:id="@+id/function_menu"
