@@ -2,16 +2,23 @@ package com.focus.statusbar.policy;
 
 import android.app.Activity;
 import android.app.Service;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
+
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.os.DeadObjectException;
+import android.os.ServiceManager;
+import android.os.Vibrator;
+
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.GestureDetector.OnGestureListener;
+
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -21,11 +28,11 @@ import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
+import android.view.IWindowManager;
+
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.view.IWindowManager;
-import android.os.DeadObjectException;
-import android.os.ServiceManager;
+
 import com.focus.statusbar.R;
 
 public class FloatSysbarService extends Service {
@@ -38,12 +45,18 @@ public class FloatSysbarService extends Service {
 
 	View mSwitchmeView;
 	View mPopupView;
+	
+	private Vibrator mVibrator;
+	private long[] mLongClickPattern;
 
 	private int mLastMoveY, mLastMoveX;
 	private int mCurMoveY, mCurMoveX;
 
 	private int mState;
+	private int mLongPressOffset = 2;
+	private int mToggleOffset = 5;
 	private int mDelaytime = 1000;
+	private int mLongPressDelaytime = 1000;
 	private int mAutoHideDelaytime = 1000 * 5;
 	private boolean mIsPopup = true;
 
@@ -57,6 +70,11 @@ public class FloatSysbarService extends Service {
 
 		mContentLayout = LayoutInflater.from(this).inflate(R.layout.floating_sys_bar, null);
 
+		mVibrator = (Vibrator) mContentLayout.getContext().getSystemService(Context.VIBRATOR_SERVICE);
+
+        mLongClickPattern = getLongIntArray(mContentLayout.getContext().getResources(),
+                com.android.internal.R.array.config_longPressVibePattern);
+
 		mFuctionMenuLayout = mContentLayout.findViewById(R.id.function_menu);
 		mFuctionMenuLayout.setOnTouchListener(mMovingTouchListener);
 
@@ -64,17 +82,18 @@ public class FloatSysbarService extends Service {
 		mSwitchmeView.setOnClickListener(mSysFunctionMenuClickListener);
 
 		mPopupView = mContentLayout.findViewById(R.id.popupmenu);
-		mPopupView.setOnClickListener(mSysFunctionMenuClickListener);
-		mPopupView.setOnLongClickListener(mSysFunctionMenuLongClickListener);
+		mPopupView.setOnTouchListener(mMovingTouchListener);
 
 		createView();
 		mHandler.postDelayed(task, mDelaytime);
 		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
 
 		mFuctionMenuLayout.invalidate();
+
 	}
 
 	private void createView() {
+
 		SharedPreferences shared = getSharedPreferences("float_flag",
 				Activity.MODE_PRIVATE);
 		SharedPreferences.Editor editor = shared.edit();
@@ -112,13 +131,32 @@ public class FloatSysbarService extends Service {
 		}
 	};
 
-	private void updateViewPosition() {
-		if (mIsPopup) {
-			mWmParams.x += mCurMoveX - mLastMoveX;
-		} else {
-			mWmParams.x = 0;
+	private Runnable sysSleepTask = new Runnable() {
+		public void run() {
+			// TODO Auto-generated method stub
+			mVibrator.vibrate(mLongClickPattern, -1);
+			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+			pm.goToSleep(SystemClock.uptimeMillis());
 		}
+	};
+
+    static long[] getLongIntArray(Resources r, int resid) {
+        int[] ar = r.getIntArray(resid);
+        if (ar == null) {
+            return null;
+        }
+        long[] out = new long[ar.length];
+        for (int i=0; i < ar.length; i++) {
+            out[i] = ar[i];
+        }
+        return out;
+    }
+
+	private void updateViewPosition() {
+		
+		mWmParams.x += mCurMoveX - mLastMoveX;
 		mWmParams.y += mCurMoveY - mLastMoveY;
+
 		mWm.updateViewLayout(mContentLayout, mWmParams);
 	}
 
@@ -145,10 +183,7 @@ public class FloatSysbarService extends Service {
 		if (mIsPopup) {
 			hideLayout();
 		} else {
-			mIsPopup = true;
-			mPopupView.setVisibility(View.GONE);
-			mFuctionMenuLayout.setVisibility(View.VISIBLE);
-			resetAutoHide();
+			showLayout();
 		}
 	}
 
@@ -159,9 +194,21 @@ public class FloatSysbarService extends Service {
 		updateViewPosition();
 	}
 
+	private void showLayout() {
+		mIsPopup = true;
+		mPopupView.setVisibility(View.GONE);
+		mFuctionMenuLayout.setVisibility(View.VISIBLE);
+		resetAutoHide();
+	}
+
 	private void resetAutoHide() {
 		mHandler.removeCallbacks(autoHideTask);
 		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
+	}
+
+	private void resetSystemSleep() {
+		mHandler.removeCallbacks(sysSleepTask);
+		
 	}
 
 	OnTouchListener mMovingTouchListener = new OnTouchListener() {
@@ -175,19 +222,43 @@ public class FloatSysbarService extends Service {
 			int x = (int) event.getRawX();
 			int y = (int) event.getRawY();
 			switch (event.getAction()) {
-			case MotionEvent.ACTION_DOWN:
+			case MotionEvent.ACTION_DOWN:	
+
 				mState = MotionEvent.ACTION_DOWN;
 				mLastMoveY = y;
 				mLastMoveX = x;
 				mCurMoveY = y;
 				mCurMoveX = x;
+
+				if(arg0 == mPopupView) {
+					mHandler.postDelayed(sysSleepTask, mLongPressDelaytime);
+				}
 				break;
 			case MotionEvent.ACTION_MOVE:
+				
 				mState = MotionEvent.ACTION_MOVE;
 				mLastMoveY = mCurMoveY;
 				mLastMoveX = mCurMoveX;
 				mCurMoveY = y;
 				mCurMoveX = x;
+				
+				int offsetY = Math.abs(mCurMoveY - mLastMoveY);
+				int offsetX = Math.abs(mCurMoveX - mLastMoveX);
+
+				Log.i("LANPENG", "MOVE OffsetX: " + offsetX);
+				Log.i("LANPENG", "MOVE OffsetY: " + offsetY);
+				if(offsetX > mLongPressOffset || 
+					offsetY > mLongPressOffset) {
+
+					mHandler.removeCallbacks(sysSleepTask);
+
+					if(offsetX > mToggleOffset ||
+						offsetY > mToggleOffset) {
+
+						showLayout();
+					}
+				}
+				
 				updateViewPosition();
 				break;
 
@@ -196,6 +267,11 @@ public class FloatSysbarService extends Service {
 				mLastMoveY = y;
 				mLastMoveX = x;
 				updateViewPosition();
+
+				if(arg0 == mPopupView) {
+					mHandler.removeCallbacks(sysSleepTask);
+				}
+
 				break;
 			}
 			return true;
@@ -207,19 +283,9 @@ public class FloatSysbarService extends Service {
 		@Override
 		public void onClick(View arg0) {
 			// TODO Auto-generated method stub
-			if (arg0 == mSwitchmeView || arg0 == mPopupView) {
+			if (arg0 == mSwitchmeView) {
 				popupMenu();
 			}
 		}
 	};
-
-	OnLongClickListener mSysFunctionMenuLongClickListener = new View.OnLongClickListener() {
-
-		@Override
-        public boolean onLongClick(View v) {
-			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			pm.goToSleep(SystemClock.uptimeMillis());
-            return true;
-        }
-    };
 }
