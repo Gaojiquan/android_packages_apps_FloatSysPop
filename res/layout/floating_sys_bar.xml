@@ -13,11 +13,17 @@
 				android:visibility="gone"
 				android:src="@drawable/float_popup_menu" />
 
-			<com.focus.statusbar.policy.CircleBatteryLayout
+			<FrameLayout
 				android:id="@+id/function_menu"
 				android:visibility="gone"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content" >
+
+
+				<com.focus.statusbar.policy.CircleBattery
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					/>
 
 				<com.focus.statusbar.policy.KeyButtonView
 				    android:id="@+id/sys_button_menu"
@@ -65,6 +71,6 @@
 					android:src="@drawable/switchme" />
 
 
-			</com.focus.statusbar.policy.CircleBatteryLayout>
+			</FrameLayout>
 
 </LinearLayout>

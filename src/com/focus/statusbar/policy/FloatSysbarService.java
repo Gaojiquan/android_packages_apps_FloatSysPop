@@ -68,6 +68,8 @@ public class FloatSysbarService extends Service {
 
 		createView();
 		mHandler.postDelayed(task, mDelaytime);
+
+		mFuctionMenuLayout.invalidate();
 	}
 
 	private void createView() {
