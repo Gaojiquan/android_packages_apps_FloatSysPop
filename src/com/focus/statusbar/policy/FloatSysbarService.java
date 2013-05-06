@@ -44,7 +44,9 @@ public class FloatSysbarService extends Service {
 
 	private int mState;
 	private int mDelaytime = 1000;
+	private int mAutoHideDelaytime = 1000 * 5;
 	private boolean mIsPopup = true;
+	private boolean mReset = true;
 
 	/* The WindowManager capable of injecting keyStrokes. */
 	final IWindowManager windowManager = IWindowManager.Stub
@@ -68,6 +70,7 @@ public class FloatSysbarService extends Service {
 
 		createView();
 		mHandler.postDelayed(task, mDelaytime);
+		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
 
 		mFuctionMenuLayout.invalidate();
 	}
@@ -102,6 +105,14 @@ public class FloatSysbarService extends Service {
 		}
 	};
 
+	private Runnable autoHideTask = new Runnable() {
+		public void run() {
+			// TODO Auto-generated method stub
+			mHandler.postDelayed(this, mAutoHideDelaytime);
+			HideLayout();
+		}
+	};
+
 	private void updateViewPosition() {
 		if (mIsPopup) {
 			mWmParams.x += mCurMoveX - mLastMoveX;
@@ -121,6 +132,7 @@ public class FloatSysbarService extends Service {
 	@Override
 	public void onDestroy() {
 		mHandler.removeCallbacks(task);
+		mHandler.removeCallbacks(autoHideTask);
 		mWm.removeView(mContentLayout);
 		super.onDestroy();
 	}
@@ -140,7 +152,15 @@ public class FloatSysbarService extends Service {
 			mIsPopup = true;
 			mPopupView.setVisibility(View.GONE);
 			mFuctionMenuLayout.setVisibility(View.VISIBLE);
+			mReset = true;
 		}
+	}
+
+	private void HideLayout() {
+		mIsPopup = false;
+		mPopupView.setVisibility(View.VISIBLE);
+		mFuctionMenuLayout.setVisibility(View.GONE);
+		updateViewPosition();
 	}
 
 	OnTouchListener mMovingTouchListener = new OnTouchListener() {
@@ -148,6 +168,10 @@ public class FloatSysbarService extends Service {
 		@Override
 		public boolean onTouch(View arg0, MotionEvent event) {
 			// TODO Auto-generated method stub
+
+			mHandler.removeCallbacks(autoHideTask);
+			mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
+
 			int x = (int) event.getRawX();
 			int y = (int) event.getRawY();
 			switch (event.getAction()) {

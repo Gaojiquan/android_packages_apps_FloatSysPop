@@ -230,7 +230,7 @@ public class KeyButtonView extends ImageView {
                 break;
         }
 
-        return true;
+        return false;
     }
 
     void sendEvent(int action, int flags) {
