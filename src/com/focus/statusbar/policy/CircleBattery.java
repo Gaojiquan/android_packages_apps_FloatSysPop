@@ -95,6 +95,7 @@ public class CircleBattery extends ImageView {
 	private Paint mPaintSystem;
 	private Paint mPaintRed;
 	private Paint mBakPaint = new Paint();
+	private final static String CIRCLE_SIZE = "vkcirclesize";
 
 	// runnable to invalidate view via mHandler.postDelayed() call
 	private final Runnable mInvalidate = new Runnable() {
@@ -116,16 +117,29 @@ public class CircleBattery extends ImageView {
 			ContentResolver resolver = mContext.getContentResolver();
 			resolver.registerContentObserver(
 					Settings.System.getUriFor(Settings.System.STATUS_BAR_BATTERY), false, this);
+			resolver.registerContentObserver(
+					Settings.System.getUriFor(CIRCLE_SIZE), false, this);
 			onChange(true);
 		}
 
 		@Override
 		public void onChange(boolean selfChange) {
+
 			int batteryStyle = (Settings.System.getInt(
 					mContext.getContentResolver(), Settings.System.STATUS_BAR_BATTERY, 0));
 
 			mActivated = true;
 			mPercentage = true;
+
+			if (mActivated && mAttached) {
+				initSizeMeasureIconHeight();
+				initSizeBasedStuff();
+
+                LayoutParams l = getLayoutParams();
+                l.width = mCircleSize + getPaddingLeft()
+                        + (mIsDocked ? mCircleSize + getPaddingLeft() : 0);
+                setLayoutParams(l);
+			}
 
 			setVisibility(mActivated ? View.VISIBLE : View.GONE);
 			if (mBatteryReceiver != null) {
@@ -399,15 +413,10 @@ public class CircleBattery extends ImageView {
 	 * for all resolutions
 	 */
 	private void initSizeMeasureIconHeight() {
-		/**
-		 * final Bitmap measure = BitmapFactory.decodeResource(getResources(),
-		 * com.focus.gridviewdemo.R.drawable.ic_sysbar_recent); final int x =
-		 * measure.getWidth() / 2;
-		 * 
-		 * mCircleSize = 0; for (int y = 0; y < measure.getHeight(); y++) { int
-		 * alpha = Color.alpha(measure.getPixel(x, y)); if (alpha > 5) {
-		 * mCircleSize++; } } //
-		 */
-		mCircleSize = getResources().getInteger(R.integer.config_float_sys_bar_radius);
+
+		int defaultSize = getResources().getInteger(R.integer.config_float_sys_bar_radius);
+		mCircleSize = Settings.System.getInt(mContext.getContentResolver(), CIRCLE_SIZE, defaultSize); 
+		mCircleSize = mCircleSize < defaultSize ? defaultSize : mCircleSize;
 	}
 }
+

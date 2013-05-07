@@ -78,7 +78,7 @@ public class FloatSysbarService extends Service {
 	private int mToggleOffset = 5;
 	private boolean mOpenOnclick = false;
 	private int mDelaytime = 1000;
-	private int mShowDelayTime = 100;
+	private int mShowDelayTime = 300;
 	private int mLongPressDelaytime = ViewConfiguration.getLongPressTimeout();
 	private int mAutoHideDelaytime = 1000 * 5;
 	private final static int mDefalutAutoHideDelaytime = 1000 * 5;
@@ -217,6 +217,11 @@ public class FloatSysbarService extends Service {
    
 				int autohide = Settings.System.getInt(resolver, KEY_AUTOHIDE, 1);
 				mAutoHide = autohide == 1;
+				if(mAutoHide) {
+					resetAutoHide();
+				} else {
+					mHandler.removeCallbacks(autoHideTask);
+				}
              
             // watch for period of auto hide
             } else if(uri.equals(Settings.System.getUriFor(KEY_AUTOHIDE_PERIOD))) {
@@ -265,6 +270,7 @@ public class FloatSysbarService extends Service {
 			mVibrator.vibrate(mLongClickPattern, -1);
 			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 			pm.goToSleep(SystemClock.uptimeMillis());
+			hideLayout();
 		}
 	};
 
