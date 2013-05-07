@@ -61,13 +61,13 @@
 				    android:src="@drawable/stat_sleep"
 				    statusbar:keyCode="26" />
 
-				<ImageView
+				<com.focus.statusbar.policy.KeyButtonView
 					android:id="@+id/switchme"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:layout_gravity="bottom|center"
 					android:layout_marginBottom="3dip"
-				        android:scaleType="center"
+				    android:scaleType="center"
 					android:src="@drawable/switchme" />
 
 

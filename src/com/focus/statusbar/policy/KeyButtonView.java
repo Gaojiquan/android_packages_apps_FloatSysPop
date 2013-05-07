@@ -40,15 +40,14 @@ import android.widget.ImageView;
 
 import com.android.internal.util.ArrayUtils;
 import com.focus.statusbar.R;
-//import com.focus.statusbar.phone.NavbarEditor;
-//import com.focus.statusbar.phone.NavbarEditor.ButtonInfo;
-//import com.focus.statusbar.phone.NavigationBarView;
 
 public class KeyButtonView extends ImageView {
     private static final String TAG = "StatusBar.KeyButtonView";
 
     final float GLOW_MAX_SCALE_FACTOR = 1.8f;
     final float BUTTON_QUIESCENT_ALPHA = 0.70f;
+
+	private OnTouchListener mOnTouchListener = null;
 
     long mDownTime;
     int mCode;
@@ -176,9 +175,13 @@ public class KeyButtonView extends ImageView {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                //Slog.d("KeyButtonView", "press");
                 mDownTime = SystemClock.uptimeMillis();
                 setPressed(true);
+
+				if( mOnTouchListener != null ) {
+					mOnTouchListener.onTouch(this, ev);
+				}
+
                 if (mCode != 0) {
                     sendEvent(KeyEvent.ACTION_DOWN, 0, mDownTime);
                 } else {
@@ -230,7 +233,11 @@ public class KeyButtonView extends ImageView {
                 break;
         }
 
-        return false;
+        return true;
+    }
+
+    void setGlobalTouchListener(OnTouchListener listener) {
+        mOnTouchListener = listener;
     }
 
     void sendEvent(int action, int flags) {

@@ -32,6 +32,7 @@ import android.view.IWindowManager;
 
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.FrameLayout;
 
 import com.focus.statusbar.R;
 
@@ -41,7 +42,7 @@ public class FloatSysbarService extends Service {
 	WindowManager mWm = null;
 
 	View mContentLayout;
-	View mFuctionMenuLayout;// fcuntion_menu
+	FrameLayout mFuctionMenuLayout;// fcuntion_menu
 
 	View mSwitchmeView;
 	View mPopupView;
@@ -66,6 +67,7 @@ public class FloatSysbarService extends Service {
 
 	@Override
 	public void onCreate() {
+
 		super.onCreate();
 
 		mContentLayout = LayoutInflater.from(this).inflate(R.layout.floating_sys_bar, null);
@@ -75,8 +77,26 @@ public class FloatSysbarService extends Service {
         mLongClickPattern = getLongIntArray(mContentLayout.getContext().getResources(),
                 com.android.internal.R.array.config_longPressVibePattern);
 
-		mFuctionMenuLayout = mContentLayout.findViewById(R.id.function_menu);
+		mFuctionMenuLayout = (FrameLayout)mContentLayout.findViewById(R.id.function_menu);
 		mFuctionMenuLayout.setOnTouchListener(mMovingTouchListener);
+
+		for(int i = 0; i < mFuctionMenuLayout.getChildCount(); i++ ) {
+			
+			View view = mFuctionMenuLayout.getChildAt(i);
+
+			if (view instanceof KeyButtonView) {
+				((KeyButtonView)view).setGlobalTouchListener(new OnTouchListener() {
+
+					@Override
+					public boolean onTouch(View arg0, MotionEvent event) {
+						// TODO Auto-generated method stub
+						Log.i("LANPENG", "resetAutoHide on KeyButtonView");
+						resetAutoHide();
+						return true;
+					}
+				});
+			}
+		}
 
 		mSwitchmeView = mContentLayout.findViewById(R.id.switchme);
 		mSwitchmeView.setOnClickListener(mSysFunctionMenuClickListener);
@@ -87,8 +107,6 @@ public class FloatSysbarService extends Service {
 		createView();
 		mHandler.postDelayed(task, mDelaytime);
 		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
-
-		mFuctionMenuLayout.invalidate();
 
 	}
 
@@ -201,7 +219,7 @@ public class FloatSysbarService extends Service {
 		resetAutoHide();
 	}
 
-	private void resetAutoHide() {
+	public void resetAutoHide() {
 		mHandler.removeCallbacks(autoHideTask);
 		mHandler.postDelayed(autoHideTask, mAutoHideDelaytime);
 	}
