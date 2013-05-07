@@ -46,6 +46,15 @@ public class FloatSysbarService extends Service {
 
 	View mSwitchmeView;
 	View mPopupView;
+
+	// to save the last location
+	private final static String KEY_LASTLOCATION_X = "x";
+	private final static String KEY_LASTLOCATION_Y = "y";
+
+	private final static String KEY_FLOAT_FLAG = "float_flag";
+	private final static String KEY_FLOAT = "float";
+
+	private SharedPreferences mSharedPreferences = null;
 	
 	private Vibrator mVibrator;
 	private long[] mLongClickPattern;
@@ -112,21 +121,26 @@ public class FloatSysbarService extends Service {
 
 	private void createView() {
 
-		SharedPreferences shared = getSharedPreferences("float_flag",
+		mSharedPreferences = getSharedPreferences(KEY_FLOAT_FLAG,
 				Activity.MODE_PRIVATE);
-		SharedPreferences.Editor editor = shared.edit();
-		editor.putInt("float", 1);
+		SharedPreferences.Editor editor = mSharedPreferences.edit();
+		editor.putInt(KEY_FLOAT, 1);
 		editor.commit();
+
 		mWm = (WindowManager) getApplicationContext()
 				.getSystemService("window");
 		mWmParams.type = 2003;
 		mWmParams.flags |= 8;
 		mWmParams.gravity = Gravity.LEFT | Gravity.TOP;
-		mWmParams.x = 0;
-		mWmParams.y = 0;
 		mWmParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
 		mWmParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
 		mWmParams.format = 1;
+
+		int x = mSharedPreferences.getInt(KEY_LASTLOCATION_X, 0);
+		int y = mSharedPreferences.getInt(KEY_LASTLOCATION_Y, 0);
+
+		mWmParams.x = x;
+		mWmParams.y = y;
 
 		mWm.addView(mContentLayout, mWmParams);
 
@@ -188,7 +202,15 @@ public class FloatSysbarService extends Service {
 	public void onDestroy() {
 		mHandler.removeCallbacks(task);
 		mHandler.removeCallbacks(autoHideTask);
+		mHandler.removeCallbacks(sysSleepTask);
 		mWm.removeView(mContentLayout);
+
+		// save the last location
+		SharedPreferences.Editor editor = mSharedPreferences.edit();
+		editor.putInt(KEY_LASTLOCATION_X, mWmParams.x);
+		editor.putInt(KEY_LASTLOCATION_Y, mWmParams.y);
+		editor.commit();
+
 		super.onDestroy();
 	}
 
@@ -197,7 +219,7 @@ public class FloatSysbarService extends Service {
 		return null;
 	}
 
-	public void popupMenu() {
+	private void popupMenu() {
 		if (mIsPopup) {
 			hideLayout();
 		} else {
@@ -209,7 +231,6 @@ public class FloatSysbarService extends Service {
 		mIsPopup = false;
 		mPopupView.setVisibility(View.VISIBLE);
 		mFuctionMenuLayout.setVisibility(View.GONE);
-		updateViewPosition();
 	}
 
 	private void showLayout() {
@@ -263,8 +284,6 @@ public class FloatSysbarService extends Service {
 				int offsetY = Math.abs(mCurMoveY - mLastMoveY);
 				int offsetX = Math.abs(mCurMoveX - mLastMoveX);
 
-				Log.i("LANPENG", "MOVE OffsetX: " + offsetX);
-				Log.i("LANPENG", "MOVE OffsetY: " + offsetY);
 				if(offsetX > mLongPressOffset || 
 					offsetY > mLongPressOffset) {
 
